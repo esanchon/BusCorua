@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.TimeTextDefaults.timeFormat
 import com.esanchon.buscorua.presentation.domain.BusTime
@@ -81,7 +82,7 @@ fun WearApp(timeToWork: String, timeToHome: String) {
                 .fillMaxWidth()
                 .padding(bottom = 8.dp)
             val iconModifier = Modifier
-                .size(24.dp)
+                .size(28.dp)
                 .wrapContentSize(align = Alignment.Center)
 
             ScalingLazyColumn(
@@ -92,6 +93,7 @@ fun WearApp(timeToWork: String, timeToHome: String) {
             {
                 item { TimeToWork(timeToWork = timeToWork) }
                 item { TimeToHome(timeToHome = timeToHome) }
+                item { TimeUpdated(timeUpdated = "") }
                 item { ButtonUpdate(contentModifier, iconModifier) }
 
             }
@@ -105,8 +107,9 @@ fun TimeToWork(timeToWork: String) {
     Text(
         modifier = Modifier.fillMaxWidth(),
         textAlign = TextAlign.Center,
+        fontSize = 26.sp,
         color = MaterialTheme.colors.primary,
-        text = "Tiempo a Trabajo: $timeToWork"
+        text = "Al Trabajo: $timeToWork'"
     )
 }
 
@@ -115,8 +118,18 @@ fun TimeToHome(timeToHome: String) {
     Text(
         modifier = Modifier.fillMaxWidth(),
         textAlign = TextAlign.Center,
+        fontSize = 26.sp,
         color = MaterialTheme.colors.primary,
-        text = "Tiempo a casa: $timeToHome"
+        text = "A casa: $timeToHome'"
+    )
+}
+@Composable
+fun TimeUpdated(timeUpdated: String) {
+    Text(
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colors.primary,
+        text = "$timeUpdated"
     )
 }
 
