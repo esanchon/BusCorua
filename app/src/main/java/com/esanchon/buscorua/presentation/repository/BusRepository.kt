@@ -3,19 +3,11 @@ package com.esanchon.buscorua.presentation.repository
 import com.esanchon.buscorua.presentation.datasource.BusRemoteDataSourceContract
 import com.esanchon.buscorua.presentation.domain.BusTime
 
-class BusRepository : BusRepositoryContract{
+class BusRepository(var remoteDataSourceContract: BusRemoteDataSourceContract) : BusRepositoryContract{
 
-    var remoteDataSourceContract : BusRemoteDataSourceContract
-
-    constructor(remoteDataSourceContract : BusRemoteDataSourceContract) {
-        this.remoteDataSourceContract = remoteDataSourceContract
+    override fun getTime() : BusTime? {
+        return remoteDataSourceContract.getTime()
     }
 
-    override fun getTimeToWork() : BusTime? {
-        return remoteDataSourceContract.getTimeToWork()
-    }
 
-    override fun getTimeToHome() : BusTime? {
-        return remoteDataSourceContract.getTimeToHome()
-    }
 }

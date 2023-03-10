@@ -10,10 +10,10 @@ import java.net.URL
 
 class BusRemoteDataSource : BusRemoteDataSourceContract {
 
-   override fun getTimeToWork() : BusTime? {
+    override fun getTime(): BusTime? {
         // Create OkHttp Client
 
-       val client: OkHttpClient = OkHttpClient().newBuilder().build()
+        val client: OkHttpClient = OkHttpClient().newBuilder().build()
 //        var client: OkHttpClient = OkHttpClient().newBuilder().addNetworkInterceptor { chain ->
 //            chain.proceed(
 //                chain.request()
@@ -23,73 +23,48 @@ class BusRemoteDataSource : BusRemoteDataSourceContract {
 //            )
 //        }.build()
 
-            try {
-                val timestamp = System.currentTimeMillis().toString()
-                // Create URL
-                val url = URL("https://itranvias.com/queryitr_v3.php?&dato=42&func=0&_=${timestamp}")
-                // Build request
-                val request = Request.Builder().url(url).build()
-
-                // Execute request
-                val response = client.newCall(request).execute()
-
-                val responseJSON = JSONTokener(response.body?.string()).nextValue() as JSONObject
-                val buses = responseJSON.getJSONObject("buses")
-                val lines = buses.getJSONArray("lineas")
-                //var result: String? = null
-                var busTime : BusTime = BusTime()
-
-
-                for (i in 0 until lines.length()) {
-                    val line = lines.getJSONObject(i)
-                    if(line.getString("linea") == "301") {
-                        //busTime?.time = line.getJSONArray("buses").getJSONObject(0).getString("tiempo")
-                            busTime.time = line.getJSONArray("buses").getJSONObject(0).getString("tiempo")
-                        }
-
-                    }
-                return busTime
-
-            }
-            catch(err:Error) {
-                return null
-            }
-            catch(err:Exception) {
-                return null
-            }
-
-    }
-
-    override fun getTimeToHome(): BusTime? {
-        val client: OkHttpClient = OkHttpClient().newBuilder().build()
-
         try {
-            val timestamp = System.currentTimeMillis().toString()
+            var busTime: BusTime = BusTime()
+            var timestamp = System.currentTimeMillis().toString()
             // Create URL
-            val url = URL("https://itranvias.com/queryitr_v3.php?&dato=3&func=0&_=${timestamp}")
+            var url = URL("https://itranvias.com/queryitr_v3.php?&dato=42&func=0&_=${timestamp}")
             // Build request
-            val request = Request.Builder().url(url).build()
+            var request = Request.Builder().url(url).build()
 
             // Execute request
-            val response = client.newCall(request).execute()
+            var response = client.newCall(request).execute()
 
-            val responseJSON = JSONTokener(response.body?.string()).nextValue() as JSONObject
-            val buses = responseJSON.getJSONObject("buses")
-            val lines = buses.getJSONArray("lineas")
-            var busTime : BusTime = BusTime()
+            var responseJSON = JSONTokener(response.body?.string()).nextValue() as JSONObject
+            var buses = responseJSON.getJSONObject("buses")
+            var lines = buses.getJSONArray("lineas")
 
             for (i in 0 until lines.length()) {
                 val line = lines.getJSONObject(i)
-                if(line.getString("linea") == "301") {
-                    busTime.time = line.getJSONArray("buses").getJSONObject(0).getString("tiempo")
+                if (line.getString("linea") == "301") {
+                    //busTime?.time = line.getJSONArray("buses").getJSONObject(0).getString("tiempo")
+                    busTime.timeToWork =
+                        line.getJSONArray("buses").getJSONObject(0).getString("tiempo")
+                }
+
+            }
+            timestamp = System.currentTimeMillis().toString()
+            url = URL("https://itranvias.com/queryitr_v3.php?&dato=3&func=0&_=${timestamp}")
+            request = Request.Builder().url(url).build()
+            response = client.newCall(request).execute()
+            responseJSON = JSONTokener(response.body?.string()).nextValue() as JSONObject
+            buses = responseJSON.getJSONObject("buses")
+            lines = buses.getJSONArray("lineas")
+            for (i in 0 until lines.length()) {
+                val line = lines.getJSONObject(i)
+                if (line.getString("linea") == "301") {
+                    busTime.timeToHome =
+                        line.getJSONArray("buses").getJSONObject(0).getString("tiempo")
                 }
             }
             return busTime
-        }
-        catch(err:Error) {
+        } catch (err: Error) {
             return null
-        }
-        catch(err:Exception) {
+        } catch (err: Exception) {
             return null
         }
     }
