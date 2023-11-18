@@ -6,7 +6,10 @@
 
 package com.esanchon.buscorua.presentation.ui
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,34 +27,78 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.TimeTextDefaults.timeFormat
+import com.esanchon.buscorua.presentation.BusApplication
 import com.esanchon.buscorua.presentation.domain.BusTime
 import com.esanchon.buscorua.presentation.presentation.MainPresenter
 import com.esanchon.buscorua.presentation.theme.BusCoruñaTheme
-import androidx.wear.compose.material.Chip as Chip
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.tasks.CancellationToken
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.android.gms.tasks.OnTokenCanceledListener
 
 class MainActivity : ComponentActivity(), ViewTranslator {
 
+    var presenter: MainPresenter? = null
+    var location: Location = Location("")
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        MainPresenter(viewTranslator = this).onCreate()
+        presenter = MainPresenter(viewTranslator = this)
+
+
+        val fusedLocationClient =
+            LocationServices.getFusedLocationProviderClient(BusApplication.appContext!!)
+
+        if (ActivityCompat.checkSelfPermission(
+                BusApplication.appContext!!,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                BusApplication.appContext!!,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 1)
+
+        } else {
+
+            fusedLocationClient.getCurrentLocation(
+                LocationRequest.PRIORITY_HIGH_ACCURACY,
+                object : CancellationToken() {
+                    override fun onCanceledRequested(p0: OnTokenCanceledListener) =
+                        CancellationTokenSource().token
+
+                    override fun isCancellationRequested() = false
+                })
+                .addOnSuccessListener { location: Location? ->
+                    if (location == null)
+                    else {
+                        presenter!!.onCreate(location)
+                    }
+               }
+        }
+
         setContent {
-            WearApp("Cargando..", "Cargando..")
+            WearApp("?", "?")
         }
     }
 
     override fun showTime(busTime: BusTime) {
         busTime.let {
             setContent {
-                WearApp(it.timeToWork, it.timeToHome)
+                WearApp(it.time, it.timeToHome)
             }
         }
     }
 
     override fun showError() {
         setContent {
-            WearApp("No disponible", "No disponible")
+            WearApp("??", "??")
         }
     }
 }
@@ -123,6 +170,7 @@ fun TimeToHome(timeToHome: String) {
         text = "A casa: $timeToHome'"
     )
 }
+
 @Composable
 fun TimeUpdated(timeUpdated: String) {
     Text(
@@ -146,7 +194,7 @@ fun ButtonUpdate(
         // Button
         Button(
             modifier = Modifier.size(ButtonDefaults.DefaultButtonSize),
-            onClick = { MainPresenter(viewTranslator = context as MainActivity).onCreate() },
+            onClick = { (context as MainActivity).presenter },
         ) {
             Icon(
                 imageVector = Icons.Rounded.Refresh,
@@ -156,6 +204,7 @@ fun ButtonUpdate(
         }
     }
 }
+
 @Composable
 fun ChipTime(
     modifier: Modifier = Modifier,
@@ -184,5 +233,5 @@ fun ChipTime(
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp("Loading..", "Loading..")
+    WearApp("?", "?")
 }

@@ -1,6 +1,8 @@
 package com.esanchon.buscorua.presentation.presentation
 
+import android.location.Location
 import com.esanchon.buscorua.presentation.datasource.BusRemoteDataSource
+import com.esanchon.buscorua.presentation.datasource.LocationLocalDataSource
 import com.esanchon.buscorua.presentation.domain.GetTimeUseCase
 import com.esanchon.buscorua.presentation.repository.BusRepository
 import com.esanchon.buscorua.presentation.ui.MainActivity
@@ -10,13 +12,13 @@ import kotlinx.coroutines.runBlocking
 
 class MainPresenter(var viewTranslator: MainActivity) {
 
-    fun onCreate() {
-        runBlocking(){
-            val getTimeUseCase = GetTimeUseCase(BusRepository(BusRemoteDataSource()))
+    fun onCreate(location: Location) {
+        runBlocking {
+            val getTimeUseCase = GetTimeUseCase(BusRepository(BusRemoteDataSource(),LocationLocalDataSource()))
 
 
             GlobalScope.launch {
-                val busTime =  getTimeUseCase.execute()
+                val busTime =  getTimeUseCase.execute(location)
 
                 busTime?.let {
                     viewTranslator.showTime(it)
