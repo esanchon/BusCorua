@@ -127,3 +127,7 @@ app/src/main/java/com/esanchon/buscorua/presentation/
 ## Aviso
 
 Proyecto personal sin relación con la Compañía de Tranvías de La Coruña ni con iTranvías. Usa un servicio web público no documentado que puede cambiar o dejar de funcionar sin aviso. Los tiempos son estimaciones del propio servicio.
+
+## Licencia
+
+El código se distribuye bajo la [licencia MIT](LICENSE). El logotipo "TC" del icono de la app pertenece a la Compañía de Tranvías de La Coruña y no está cubierto por esta licencia.
