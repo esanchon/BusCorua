@@ -41,6 +41,67 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".presentation.ui.RouteDetailActivity"
+            android:exported="false"
+            android:label="Próximos buses"
+            android:theme="@android:style/Theme.DeviceDefault" />
+
+        <activity
+            android:name=".presentation.ui.SettingsActivity"
+            android:exported="false"
+            android:label="Configuración"
+            android:theme="@android:style/Theme.DeviceDefault" />
+
+        <activity
+            android:name=".presentation.ui.StopPickerActivity"
+            android:exported="false"
+            android:label="Añadir parada"
+            android:theme="@android:style/Theme.DeviceDefault" />
+
+        <activity
+            android:name=".presentation.ui.StopPadActivity"
+            android:exported="false"
+            android:label="Parada"
+            android:theme="@android:style/Theme.DeviceDefault" />
+
+        <!-- Complicaciones de la esfera: aparecen al personalizar la esfera como "Bus al trabajo" / "Bus a casa" -->
+        <service
+            android:name=".presentation.complication.WorkComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_complication_work"
+            android:label="Bus al trabajo"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT,LONG_TEXT" />
+            <!-- Mínimo que permite Wear OS; entre medias la esfera descuenta los minutos sola -->
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="300" />
+        </service>
+
+        <service
+            android:name=".presentation.complication.HomeComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_complication_home"
+            android:label="Bus a casa"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT,LONG_TEXT" />
+            <!-- Mínimo que permite Wear OS; entre medias la esfera descuenta los minutos sola -->
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="300" />
+        </service>
     </application>
 
 </manifest>

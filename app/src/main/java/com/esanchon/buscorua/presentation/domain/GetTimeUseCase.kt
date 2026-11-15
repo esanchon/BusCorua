@@ -7,7 +7,7 @@ import kotlinx.coroutines.withContext
 
 class GetTimeUseCase(var busRepositoryContract: BusRepositoryContract) {
 
-    suspend fun execute(location: Location): BusTime? = withContext(Dispatchers.Default) {
+    suspend fun execute(location: Location): BusTime? = withContext(Dispatchers.IO) {
         busRepositoryContract.getBusTime(location)
     }
 }

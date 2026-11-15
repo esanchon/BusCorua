@@ -13,3 +13,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Configuración local de Android Studio con datos de los dispositivos (serie, rutas de emuladores)
+/.idea/deploymentTargetDropDown.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
+
+# Claves de firma
+*.jks
+*.keystore

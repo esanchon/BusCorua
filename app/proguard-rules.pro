@@ -19,3 +19,11 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Conserva números de línea para que los errores en release sean legibles.
+-keepattributes SourceFile,LineNumberTable
+
+# OkHttp 4.9.0: proveedores TLS opcionales que no existen en Android.
+-dontwarn org.bouncycastle.jsse.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**

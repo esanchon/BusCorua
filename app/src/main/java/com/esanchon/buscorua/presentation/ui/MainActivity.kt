@@ -1,101 +1,69 @@
 package com.esanchon.buscorua.presentation.ui
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
+import android.content.Intent
 import android.location.Location
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.TimeTextDefaults.timeFormat
 import com.esanchon.buscorua.presentation.domain.BusTime
+import com.esanchon.buscorua.presentation.domain.Route
 import com.esanchon.buscorua.presentation.presentation.MainPresenter
 import com.esanchon.buscorua.presentation.theme.BusCoruñaTheme
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.tasks.CancellationToken
-import com.google.android.gms.tasks.CancellationTokenSource
-import com.google.android.gms.tasks.OnTokenCanceledListener
 
 class MainActivity : ComponentActivity(), ViewTranslator {
 
     var presenter: MainPresenter? = null
 
+    // Estado observado por Compose: al cambiarlo solo se recompone lo necesario,
+    // sin reconstruir toda la pantalla con setContent.
+    private var busTimeState by mutableStateOf(loadingBusTime())
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        presenter = MainPresenter(viewTranslator = this)
+        presenter = MainPresenter(viewTranslator = this, context = applicationContext)
+        setContent {
+            WearApp(
+                busTimeState,
+                onOpenRoute = { route -> startActivity(RouteDetailActivity.intent(this, route)) },
+                onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) }
+            )
+        }
+    }
+
+    // Se recarga al abrir la app, al volver al primer plano y al volver de la configuración o del detalle
+    override fun onResume() {
+        super.onResume()
         loadBusTimes()
     }
 
-    fun loadBusTimes() {
-        setContent {
-            WearApp("...", "...")
-        }
-
-        val fusedLocationClient =
-            LocationServices.getFusedLocationProviderClient(this)
-
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-                1
-            )
-            loadWithDefaultLocation()
-        } else {
-            fusedLocationClient.getCurrentLocation(
-                LocationRequest.PRIORITY_HIGH_ACCURACY,
-                object : CancellationToken() {
-                    override fun onCanceledRequested(p0: OnTokenCanceledListener) =
-                        CancellationTokenSource().token
-
-                    override fun isCancellationRequested() = false
-                })
-                .addOnSuccessListener { location: Location? ->
-                    if (location == null) {
-                        loadWithDefaultLocation()
-                    } else {
-                        presenter?.onCreate(location)
-                    }
-                }
-                .addOnFailureListener {
-                    loadWithDefaultLocation()
-                }
-        }
+    override fun onDestroy() {
+        presenter?.onDestroy()
+        super.onDestroy()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 1) {
-            loadBusTimes()
-        }
+    fun loadBusTimes() {
+        busTimeState = loadingBusTime()
+
+        // GPS Disabled: Loads directly with default location without requesting GPS or permissions.
+        loadWithDefaultLocation()
     }
 
     private fun loadWithDefaultLocation() {
@@ -107,20 +75,26 @@ class MainActivity : ComponentActivity(), ViewTranslator {
     }
 
     override fun showTime(busTime: BusTime) {
-        setContent {
-            WearApp(busTime.time ?: "?", busTime.timeToHome ?: "?")
-        }
+        busTimeState = busTime
     }
 
     override fun showError() {
-        setContent {
-            WearApp("Error", "Error")
+        busTimeState = BusTime().apply {
+            time = "Error"
+            timeToHome = "Error"
+            line = "-"
+            lineToHome = "-"
         }
+    }
+
+    private fun loadingBusTime() = BusTime().apply {
+        time = "..."
+        timeToHome = "..."
     }
 }
 
 @Composable
-fun WearApp(timeToWork: String, timeToHome: String) {
+fun WearApp(busTime: BusTime, onOpenRoute: (Route) -> Unit = {}, onOpenSettings: () -> Unit = {}) {
     BusCoruñaTheme {
         val listState = rememberScalingLazyListState()
         Scaffold(
@@ -138,116 +112,192 @@ fun WearApp(timeToWork: String, timeToHome: String) {
                 )
             }
         ) {
-
             val contentModifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp)
-            val iconModifier = Modifier
-                .size(28.dp)
-                .wrapContentSize(align = Alignment.Center)
+                .padding(horizontal = 8.dp)
 
             ScalingLazyColumn(
                 modifier = contentModifier,
                 autoCentering = AutoCenteringParams(itemIndex = 0),
                 state = listState
-            )
-            {
-                item { TimeToWork(timeToWork = timeToWork) }
-                item { TimeToHome(timeToHome = timeToHome) }
-                item { TimeUpdated(timeUpdated = "") }
-                item { ButtonUpdate(contentModifier, iconModifier) }
+            ) {
+                item {
+                    Text(
+                        text = "🚌 Bus Coruña",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colors.primary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 6.dp)
+                    )
+                }
 
+                // Card: Al Trabajo
+                item {
+                    RouteCard(
+                        title = "🏢 Al Trabajo",
+                        stopNumber = busTime.stopWork,
+                        stopName = busTime.stopWorkName,
+                        lineNum = busTime.line ?: "-",
+                        timeText = busTime.time ?: "N/A",
+                        onClick = { onOpenRoute(Route.WORK) }
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(4.dp)) }
+
+                // Card: A Casa
+                item {
+                    RouteCard(
+                        title = "🏠 A Casa",
+                        stopNumber = busTime.stopHome,
+                        stopName = busTime.stopHomeName,
+                        lineNum = busTime.lineToHome ?: "-",
+                        timeText = busTime.timeToHome ?: "N/A",
+                        onClick = { onOpenRoute(Route.HOME) }
+                    )
+                }
+
+                item {
+                    CompactChip(
+                        onClick = onOpenSettings,
+                        label = { Text("⚙️ Configuración", fontSize = 12.sp) },
+                        colors = ChipDefaults.secondaryChipColors(),
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
             }
         }
     }
 }
 
-
 @Composable
-fun TimeToWork(timeToWork: String) {
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center,
-        fontSize = 26.sp,
-        color = MaterialTheme.colors.primary,
-        text = "Al Trabajo: $timeToWork"
-    )
-}
-
-@Composable
-fun TimeToHome(timeToHome: String) {
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center,
-        fontSize = 26.sp,
-        color = MaterialTheme.colors.primary,
-        text = "A casa: $timeToHome"
-    )
-}
-
-@Composable
-fun TimeUpdated(timeUpdated: String) {
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center,
-        color = MaterialTheme.colors.primary,
-        text = timeUpdated
-    )
-}
-
-@Composable
-fun ButtonUpdate(
-    modifier: Modifier = Modifier,
-    iconModifier: Modifier = Modifier,
-    context: Context = LocalContext.current
+fun RouteCard(
+    title: String,
+    stopNumber: String?,
+    stopName: String?,
+    lineNum: String,
+    timeText: String,
+    onClick: () -> Unit = {}
 ) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Center
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        // Menos relleno arriba que el de serie para que el título no quede separado del borde
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp)
     ) {
-        // Button
-        Button(
-            modifier = Modifier.size(ButtonDefaults.DefaultButtonSize),
-            onClick = {
-                (context as? MainActivity)?.loadBusTimes()
-            },
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Refresh,
-                contentDescription = "triggers update action",
-                modifier = iconModifier
+            // Izquierda: título y línea, uno encima de otro
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colors.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Chip(
+                    onClick = onClick,
+                    // Etiqueta roja con texto blanco, como el fondo del logotipo de Tranvías
+                    colors = ChipDefaults.primaryChipColors(),
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .height(32.dp),
+                    label = {
+                        Text(
+                            text = "Bus $lineNum",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                )
+            }
+
+            // Derecha: los minutos ocupan la altura del título y de la línea
+            ArrivalTime(timeText)
+        }
+
+        // "42 - Emilio González López, Manuel Azaña", recortado si no cabe
+        val stopLine = when {
+            stopNumber.isNullOrBlank() -> null
+            stopName.isNullOrBlank() -> stopNumber
+            else -> "$stopNumber - $stopName"
+        }
+        if (stopLine != null) {
+            Text(
+                text = stopLine,
+                fontSize = 10.sp,
+                color = MaterialTheme.colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
             )
         }
     }
 }
 
+/** Minutos en grande con "min" debajo; los textos ("...", "Error", "Sin buses") a un tamaño que quepa. */
+// includeFontPadding es experimental en Compose 1.2 (estable en versiones posteriores)
+@OptIn(ExperimentalTextApi::class)
 @Composable
-fun ChipTime(
-    modifier: Modifier = Modifier,
-    iconModifier: Modifier = Modifier
-) {
-    Chip(
-        modifier = modifier,
-        onClick = { /* ... */ },
-        label = {
-            Text(
-                text = "5 minute Meditation",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+private fun ArrivalTime(timeText: String) {
+    val minutes = timeText.toIntOrNull()
+    if (minutes == null) {
+        Text(
+            text = timeText,
+            fontSize = if (timeText.length <= 3) 32.sp else 14.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colors.primary,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+        return
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(start = 4.dp)
+    ) {
+        Text(
+            text = "$minutes",
+            // Con 3 cifras se reduce para no comerse el título
+            fontSize = if (minutes < 100) 52.sp else 40.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colors.primary,
+            maxLines = 1,
+            // Sin el margen de fuente que Android añade arriba y abajo: la fila no crece de más
+            style = LocalTextStyle.current.copy(
+                platformStyle = PlatformTextStyle(includeFontPadding = false)
             )
-        },
-        icon = {
-            Icon(
-                imageVector = Icons.Rounded.SelfImprovement,
-                contentDescription = "triggers meditation action",
-                modifier = iconModifier
-            )
-        },
-    )
+        )
+        Text(
+            text = "min",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colors.primary,
+            // Acerca "min" al número (las fuentes grandes dejan hueco debajo)
+            modifier = Modifier.offset(y = (-2).dp)
+        )
+    }
 }
 
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp("?", "?")
+    WearApp(BusTime().apply {
+        time = "5"
+        line = "3"
+        stopWork = "42"
+        timeToHome = "12"
+        lineToHome = "3A"
+        stopHome = "3"
+        stopWorkName = "Emilio González López, Manuel Azaña"
+        stopHomeName = "Av. da Mariña, Obelisco"
+    })
 }

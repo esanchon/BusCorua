@@ -3,19 +3,30 @@ package com.esanchon.buscorua.presentation.theme
 import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.material.Colors
 
-val Purple200 = Color(0xFFBB86FC)
-val Purple500 = Color(0xFF6200EE)
-val Purple700 = Color(0xFF3700B3)
-val Teal200 = Color(0xFF03DAC5)
-val Red400 = Color(0xFFCF6679)
+// Colores de la Compañía de Tranvías de La Coruña: rojo de fondo y plata del logotipo "TC"
+val TranviasRed = Color(0xFFE63B2C)
+val TranviasRedDark = Color(0xFF8E2219)
+val TranviasSilver = Color(0xFFACADAD)
+val TranviasSilverDark = Color(0xFF7D7E7E)
+
+// Gris oscuro con un punto cálido para tarjetas y botones, a juego con el rojo
+val SurfaceWarm = Color(0xFF2B2322)
+
+// Avisos en ámbar: en rojo se confundirían con el color de la marca
+val WarningAmber = Color(0xFFFFB74D)
 
 internal val wearColorPalette: Colors = Colors(
-    primary = Purple200,
-    primaryVariant = Purple700,
-    secondary = Teal200,
-    secondaryVariant = Teal200,
-    error = Red400,
-    onPrimary = Color.Black,
+    primary = TranviasRed,
+    primaryVariant = TranviasRedDark,
+    secondary = TranviasSilver,
+    secondaryVariant = TranviasSilverDark,
+    background = Color.Black,
+    surface = SurfaceWarm,
+    error = WarningAmber,
+    onPrimary = Color.White,
     onSecondary = Color.Black,
+    onBackground = Color.White,
+    onSurface = Color.White,
+    onSurfaceVariant = TranviasSilver,
     onError = Color.Black
 )

@@ -1,58 +1,45 @@
 package com.esanchon.buscorua.presentation.datasource
 
-import com.esanchon.buscorua.presentation.domain.BusTime
-import okhttp3.OkHttpClient
+import com.esanchon.buscorua.presentation.domain.Arrival
 import okhttp3.Request
 import org.json.JSONObject
-import org.json.JSONTokener
-import java.net.URL
 
 class BusRemoteDataSource : BusRemoteDataSourceContract {
 
-    override fun getTime(busStop: Int): BusTime? {
-        val client: OkHttpClient = OkHttpClient().newBuilder().build()
+    override fun getArrivals(busStop: Int): List<Arrival>? {
+        val json = query("dato=$busStop&func=0&_=${System.currentTimeMillis()}") ?: return null
+        val lines = json.optJSONObject("buses")?.optJSONArray("lineas") ?: return emptyList()
 
-        try {
-            val busTime = BusTime()
-            val timestamp = System.currentTimeMillis().toString()
-            val url = URL("https://itranvias.com/queryitr_v3.php?&dato=${busStop}&func=0&_=${timestamp}")
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "Mozilla/5.0")
-                .build()
-
-            val response = client.newCall(request).execute()
-            val responseString = response.body?.string() ?: return null
-
-            val jsonToken = JSONTokener(responseString).nextValue()
-            if (jsonToken !is JSONObject) return null
-
-            val buses = jsonToken.optJSONObject("buses") ?: return null
-            val lines = buses.optJSONArray("lineas") ?: return null
-
-            var foundTime: String? = null
-            var foundLine: String? = null
-
-            for (i in 0 until lines.length()) {
-                val line = lines.getJSONObject(i)
-                val lineaNum = line.optString("linea")
-                val busesArray = line.optJSONArray("buses")
-                if (busesArray != null && busesArray.length() > 0) {
-                    val timeVal = busesArray.getJSONObject(0).optString("tiempo", "N/A")
-                    if (lineaNum == "301" || foundTime == null) {
-                        foundTime = timeVal
-                        foundLine = lineaNum
-                        if (lineaNum == "301") break
-                    }
-                }
+        val arrivals = mutableListOf<Arrival>()
+        for (i in 0 until lines.length()) {
+            val line = lines.getJSONObject(i)
+            val lineId = line.optString("linea")
+            val buses = line.optJSONArray("buses") ?: continue
+            for (j in 0 until buses.length()) {
+                val minutes = buses.getJSONObject(j).optString("tiempo").toIntOrNull() ?: continue
+                arrivals += Arrival(stop = busStop, lineId = lineId, minutes = minutes)
             }
-
-            busTime.time = foundTime ?: "N/A"
-            busTime.line = foundLine ?: "-"
-            return busTime
-        } catch (err: Exception) {
-            err.printStackTrace()
-            return null
         }
+        return arrivals
+    }
+
+    override fun getCatalogJson(): String? {
+        // La fecha antigua hace que el servidor devuelva el catálogo completo
+        val json = query("func=7&dato=20160101T000000_gl_0_20160101T000000") ?: return null
+        return if (json.has("iTranvias")) json.toString() else null
+    }
+
+    private fun query(params: String): JSONObject? = try {
+        val request = Request.Builder()
+            .url("https://itranvias.com/queryitr_v3.php?$params")
+            .header("User-Agent", "Mozilla/5.0")
+            .build()
+        HttpClient.client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) null
+            else response.body?.string()?.let { JSONObject(it) }
+        }
+    } catch (err: Exception) {
+        err.printStackTrace()
+        null
     }
 }

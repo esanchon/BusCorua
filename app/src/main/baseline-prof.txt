@@ -1,0 +1,4 @@
+# Baseline Profile de la app: precompila (AOT) las clases y métodos propios
+# que se usan al arrancar y al pintar la pantalla.
+HSPLcom/esanchon/buscorua/**->**(**)**
+Lcom/esanchon/buscorua/**;
