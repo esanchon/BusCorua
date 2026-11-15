@@ -10,15 +10,14 @@ class BusRepository(var remoteDataSourceContract: BusRemoteDataSourceContract,
     : BusRepositoryContract{
 
     override fun getBusTime(location: Location) : BusTime? {
-        val busStop = localPositionDatasource.getClosestStop(location)
-       return  if(busStop == 0){
-            return BusTime()
-        } else {
+        val workBusTime = remoteDataSourceContract.getTime(42)
+        val homeBusTime = remoteDataSourceContract.getTime(3)
 
-            remoteDataSourceContract.getTime(busStop)
-        }
-
+        val result = BusTime()
+        result.time = workBusTime?.time ?: "N/A"
+        result.line = workBusTime?.line ?: "301"
+        result.timeToHome = homeBusTime?.time ?: "N/A"
+        result.lineToHome = homeBusTime?.line ?: "3"
+        return result
     }
-
-
 }

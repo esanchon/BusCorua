@@ -1,9 +1,3 @@
-/* While this template provides a good starting point for using Wear Compose, you can always
- * take a look at https://github.com/android/wear-os-samples/tree/main/ComposeStarter and
- * https://github.com/android/wear-os-samples/tree/main/ComposeAdvanced to find the most up to date
- * changes to the libraries and their usages.
- */
-
 package com.esanchon.buscorua.presentation.ui
 
 import android.Manifest
@@ -30,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.TimeTextDefaults.timeFormat
-import com.esanchon.buscorua.presentation.BusApplication
 import com.esanchon.buscorua.presentation.domain.BusTime
 import com.esanchon.buscorua.presentation.presentation.MainPresenter
 import com.esanchon.buscorua.presentation.theme.BusCoruñaTheme
@@ -43,30 +36,36 @@ import com.google.android.gms.tasks.OnTokenCanceledListener
 class MainActivity : ComponentActivity(), ViewTranslator {
 
     var presenter: MainPresenter? = null
-    var location: Location = Location("")
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         presenter = MainPresenter(viewTranslator = this)
+        loadBusTimes()
+    }
 
+    fun loadBusTimes() {
+        setContent {
+            WearApp("...", "...")
+        }
 
         val fusedLocationClient =
-            LocationServices.getFusedLocationProviderClient(BusApplication.appContext!!)
+            LocationServices.getFusedLocationProviderClient(this)
 
         if (ActivityCompat.checkSelfPermission(
-                BusApplication.appContext!!,
+                this,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                BusApplication.appContext!!,
+                this,
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
-            requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 1)
-
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                1
+            )
+            loadWithDefaultLocation()
         } else {
-
             fusedLocationClient.getCurrentLocation(
                 LocationRequest.PRIORITY_HIGH_ACCURACY,
                 object : CancellationToken() {
@@ -76,29 +75,46 @@ class MainActivity : ComponentActivity(), ViewTranslator {
                     override fun isCancellationRequested() = false
                 })
                 .addOnSuccessListener { location: Location? ->
-                    if (location == null)
-                    else {
-                        presenter!!.onCreate(location)
+                    if (location == null) {
+                        loadWithDefaultLocation()
+                    } else {
+                        presenter?.onCreate(location)
                     }
-               }
-        }
-
-        setContent {
-            WearApp("?", "?")
+                }
+                .addOnFailureListener {
+                    loadWithDefaultLocation()
+                }
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1) {
+            loadBusTimes()
+        }
+    }
+
+    private fun loadWithDefaultLocation() {
+        val defaultLocation = Location("").apply {
+            latitude = 43.37135
+            longitude = -8.396
+        }
+        presenter?.onCreate(defaultLocation)
+    }
+
     override fun showTime(busTime: BusTime) {
-        busTime.let {
-            setContent {
-                WearApp(it.time, it.timeToHome)
-            }
+        setContent {
+            WearApp(busTime.time ?: "?", busTime.timeToHome ?: "?")
         }
     }
 
     override fun showError() {
         setContent {
-            WearApp("??", "??")
+            WearApp("Error", "Error")
         }
     }
 }
@@ -114,8 +130,6 @@ fun WearApp(timeToWork: String, timeToHome: String) {
                 )
             },
             vignette = {
-                // Only show a Vignette for scrollable screens. This code lab only has one screen,
-                // which is scrollable, so we show it all the time.
                 Vignette(vignettePosition = VignettePosition.TopAndBottom)
             },
             positionIndicator = {
@@ -156,7 +170,7 @@ fun TimeToWork(timeToWork: String) {
         textAlign = TextAlign.Center,
         fontSize = 26.sp,
         color = MaterialTheme.colors.primary,
-        text = "Al Trabajo: $timeToWork'"
+        text = "Al Trabajo: $timeToWork"
     )
 }
 
@@ -167,7 +181,7 @@ fun TimeToHome(timeToHome: String) {
         textAlign = TextAlign.Center,
         fontSize = 26.sp,
         color = MaterialTheme.colors.primary,
-        text = "A casa: $timeToHome'"
+        text = "A casa: $timeToHome"
     )
 }
 
@@ -177,7 +191,7 @@ fun TimeUpdated(timeUpdated: String) {
         modifier = Modifier.fillMaxWidth(),
         textAlign = TextAlign.Center,
         color = MaterialTheme.colors.primary,
-        text = "$timeUpdated"
+        text = timeUpdated
     )
 }
 
@@ -194,7 +208,9 @@ fun ButtonUpdate(
         // Button
         Button(
             modifier = Modifier.size(ButtonDefaults.DefaultButtonSize),
-            onClick = { (context as MainActivity).presenter },
+            onClick = {
+                (context as? MainActivity)?.loadBusTimes()
+            },
         ) {
             Icon(
                 imageVector = Icons.Rounded.Refresh,
