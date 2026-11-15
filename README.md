@@ -44,11 +44,25 @@ Toca cualquier bus de la lista para actualizarla.
 
 Desde **⚙️ Configuración**, al final de la pantalla principal, se ajusta cada ruta por separado.
 
+<p align="center">
+  <img src="docs/images/config-paradas.png" width="200" alt="Paradas configuradas para ir al trabajo">
+  &nbsp;
+  <img src="docs/images/config-lineas.png" width="200" alt="Líneas marcadas para ir al trabajo">
+</p>
+
 **Paradas**
 
 - **+ Añadir parada** abre la lista de líneas. Elige una para ver sus paradas en el orden del recorrido y toca la tuya.
 - Si ya conoces el número, usa **🔢 Escribir número**: un teclado numérico muestra el nombre de la parada mientras escribes y no deja guardar una que no exista.
 - Toca una parada añadida para cambiarla por otra, o pulsa **✕** para quitarla.
+
+<p align="center">
+  <img src="docs/images/elegir-linea.png" width="200" alt="Elegir parada por línea o escribiendo el número">
+  &nbsp;
+  <img src="docs/images/paradas-de-linea.png" width="200" alt="Paradas de la línea 1 en orden de recorrido">
+  &nbsp;
+  <img src="docs/images/teclado-numerico.png" width="200" alt="Teclado numérico mostrando el nombre de la parada 42">
+</p>
 
 **Líneas**
 
