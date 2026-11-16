@@ -77,6 +77,9 @@ dependencies {
     implementation "androidx.wear.compose:compose-material:$wear_compose_version"
     implementation "androidx.wear.compose:compose-foundation:$wear_compose_version"
 
+    // Teclado / dictado del reloj para escribir el nombre de un destino
+    implementation 'androidx.wear:wear-input:1.1.0'
+
     // Complicaciones de la esfera ("Bus al trabajo" / "Bus a casa")
     implementation 'androidx.wear.watchface:watchface-complications-data-source-ktx:1.1.1'
 }

@@ -22,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.TimeTextDefaults.timeFormat
 import com.esanchon.buscorua.presentation.complication.RouteComplicationService
+import com.esanchon.buscorua.presentation.datasource.SettingsLocalDataSource
 import com.esanchon.buscorua.presentation.domain.BusArrival
 import com.esanchon.buscorua.presentation.domain.Route
 import com.esanchon.buscorua.presentation.domain.RouteArrivals
@@ -41,7 +42,8 @@ class RouteDetailActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        route = intent.getStringExtra(EXTRA_ROUTE)?.let { runCatching { Route.valueOf(it) }.getOrNull() } ?: Route.WORK
+        // Si el destino se ha borrado (p. ej. desde una complicación antigua), se muestra el del trabajo
+        route = intent.getStringExtra(EXTRA_ROUTE)?.let { SettingsLocalDataSource(this).getRoute(it) } ?: Route.WORK
         repository = BusRepository.create(applicationContext)
 
         // Se parte de lo que muestra la tarjeta, para que el primer bus sea el mismo
@@ -69,7 +71,7 @@ class RouteDetailActivity : ComponentActivity() {
         private const val REUSE_MS = 30_000L
 
         fun intent(context: Context, route: Route): Intent =
-            Intent(context, RouteDetailActivity::class.java).putExtra(EXTRA_ROUTE, route.name)
+            Intent(context, RouteDetailActivity::class.java).putExtra(EXTRA_ROUTE, route.id)
     }
 }
 
@@ -91,7 +93,9 @@ fun RouteDetailScreen(route: Route, result: RouteArrivals?, loading: Boolean, on
             ) {
                 item {
                     Text(
-                        text = if (route == Route.WORK) "🏢 Al Trabajo" else "🏠 A Casa",
+                        text = route.title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colors.primary,
@@ -103,6 +107,7 @@ fun RouteDetailScreen(route: Route, result: RouteArrivals?, loading: Boolean, on
                 val arrivals = result?.arrivals
                 when {
                     result == null || (loading && arrivals.isNullOrEmpty()) -> item { StatusText("...") }
+                    result.stops.isEmpty() -> item { StatusCard("Añade paradas en Configuración", onRefresh) }
                     arrivals == null -> item { StatusCard("Error al consultar", onRefresh) }
                     arrivals.isEmpty() -> item { StatusCard("Sin buses de tus líneas", onRefresh) }
                     else -> {

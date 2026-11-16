@@ -1,13 +1,10 @@
 package com.esanchon.buscorua.presentation.domain
 
-import android.location.Location
 import com.esanchon.buscorua.presentation.repository.BusRepositoryContract
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class GetTimeUseCase(var busRepositoryContract: BusRepositoryContract) {
 
-    suspend fun execute(location: Location): BusTime? = withContext(Dispatchers.IO) {
-        busRepositoryContract.getBusTime(location)
-    }
+    /** Próximos buses de todos los destinos, consultados en paralelo. */
+    suspend fun execute(routes: List<Route>): Map<Route, RouteArrivals> =
+        busRepositoryContract.getAllRouteArrivals(routes)
 }

@@ -1,12 +1,11 @@
 package com.esanchon.buscorua.presentation.repository
 
-import android.location.Location
-import com.esanchon.buscorua.presentation.domain.BusTime
 import com.esanchon.buscorua.presentation.domain.Route
 import com.esanchon.buscorua.presentation.domain.RouteArrivals
 
 interface BusRepositoryContract {
-    suspend fun getBusTime(location: Location) : BusTime?
+    /** Próximos buses de varias rutas, consultadas todas en paralelo. */
+    suspend fun getAllRouteArrivals(routes: List<Route>): Map<Route, RouteArrivals>
 
     /** Todos los próximos buses de la ruta que cumplen su configuración, ordenados por minutos. */
     suspend fun getRouteArrivals(route: Route): RouteArrivals

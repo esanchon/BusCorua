@@ -9,32 +9,29 @@ import com.esanchon.buscorua.presentation.datasource.SettingsLocalDataSource
 import com.esanchon.buscorua.presentation.repository.CatalogRepository
 
 /**
- * Decide qué tarjeta va primero según dónde estás. Las paradas de "Al trabajo" están
- * cerca de casa y las de "A casa" cerca del trabajo, así que va primero la ruta
- * cuya parada más cercana tienes más cerca. Sin ubicación, se mantiene el último orden.
+ * Ordena los destinos según dónde estás. Las paradas de un destino son donde coges
+ * el bus para ir allí: las de "Al trabajo" están cerca de casa y las de "A casa" cerca
+ * del trabajo. Primero va el destino cuya parada más cercana tienes más cerca.
+ * Si dos empatan (mismas paradas), se respeta el orden de creación.
+ * Sin ubicación, se mantiene el último orden.
  */
-class GetFirstRouteUseCase(
+class GetRouteOrderUseCase(
     private val settings: SettingsLocalDataSource,
     private val catalogRepository: CatalogRepository,
     private val locationDataSource: LocationDataSource
 ) {
 
     /** Orden guardado, para pintar la pantalla antes de tener la ubicación. */
-    fun lastFirstRoute(): Route = settings.getFirstRoute()
+    fun lastOrder(): List<Route> = settings.getRouteOrder()
 
-    suspend fun execute(): Route {
-        val location = locationDataSource.getLocation() ?: return settings.getFirstRoute()
-        val catalog = catalogRepository.getCatalog() ?: return settings.getFirstRoute()
+    suspend fun execute(): List<Route> {
+        val location = locationDataSource.getLocation() ?: return settings.getRouteOrder()
+        val catalog = catalogRepository.getCatalog() ?: return settings.getRouteOrder()
 
-        val toWork = nearestStopDistance(location, catalog, Route.WORK)
-        val toHome = nearestStopDistance(location, catalog, Route.HOME)
-        val first = when {
-            toWork == null || toHome == null -> return settings.getFirstRoute()
-            toWork <= toHome -> Route.WORK
-            else -> Route.HOME
-        }
-        settings.setFirstRoute(first)
-        return first
+        // Los destinos sin paradas con posición, al final
+        val ordered = settings.getRoutes().sortedBy { nearestStopDistance(location, catalog, it) ?: Float.MAX_VALUE }
+        settings.setRouteOrder(ordered)
+        return ordered
     }
 
     /** Metros hasta la parada más cercana de la ruta, null si ninguna tiene posición. */
@@ -51,9 +48,9 @@ class GetFirstRouteUseCase(
             .minOrNull()
 
     companion object {
-        fun create(context: Context): GetFirstRouteUseCase {
+        fun create(context: Context): GetRouteOrderUseCase {
             val appContext = context.applicationContext
-            return GetFirstRouteUseCase(
+            return GetRouteOrderUseCase(
                 SettingsLocalDataSource(appContext),
                 CatalogRepository(BusRemoteDataSource(), CatalogLocalDataSource(appContext)),
                 LocationDataSource(appContext)

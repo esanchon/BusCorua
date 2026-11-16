@@ -1,6 +1,8 @@
 package com.esanchon.buscorua.presentation.ui
 
 import android.Manifest
+import android.app.RemoteInput
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.wear.compose.material.*
+import androidx.wear.input.RemoteInputIntentHelper
 import androidx.wear.compose.material.TimeTextDefaults.timeFormat
 import com.esanchon.buscorua.presentation.complication.RouteComplicationService
 import com.esanchon.buscorua.presentation.datasource.BusRemoteDataSource
@@ -63,6 +66,21 @@ fun SettingsScreen(settings: SettingsLocalDataSource, catalogRepository: Catalog
     var catalog by remember { mutableStateOf<Catalog?>(null) }
     LaunchedEffect(Unit) { catalog = catalogRepository.getCatalog() }
 
+    val context = LocalContext.current
+    var routes by remember { mutableStateOf(settings.getRoutes()) }
+
+    // Nombre del destino nuevo, escrito o dictado con la entrada de texto del reloj
+    val nameInput = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val name = result.data
+            ?.let { RemoteInput.getResultsFromIntent(it) }
+            ?.getCharSequence(DESTINATION_NAME_KEY)
+            ?.toString()?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return@rememberLauncherForActivityResult
+        settings.addRoute(name.take(30))
+        routes = settings.getRoutes()
+    }
+
     BusCoruñaTheme {
         val listState = rememberScalingLazyListState()
         Scaffold(
@@ -86,10 +104,40 @@ fun SettingsScreen(settings: SettingsLocalDataSource, catalogRepository: Catalog
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                item { ListHeader { Text("🏢 Al Trabajo") } }
-                item { RouteSettingsSection(settings, catalog, Route.WORK) }
-                item { ListHeader { Text("🏠 A Casa") } }
-                item { RouteSettingsSection(settings, catalog, Route.HOME) }
+                routes.forEach { route ->
+                    item(key = "header_${route.id}") {
+                        ListHeader { Text(route.title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    }
+                    item(key = route.id) {
+                        Column {
+                            RouteSettingsSection(settings, catalog, route)
+                            if (route.isCustom) {
+                                RemoveRouteButton(route) {
+                                    settings.removeRoute(route)
+                                    routes = settings.getRoutes()
+                                    RouteComplicationService.requestUpdate(context)
+                                }
+                            }
+                        }
+                    }
+                }
+                item {
+                    Chip(
+                        onClick = {
+                            try {
+                                nameInput.launch(destinationNameIntent())
+                            } catch (err: ActivityNotFoundException) {
+                                err.printStackTrace()
+                            }
+                        },
+                        label = { Text("+ Añadir destino") },
+                        secondaryLabel = { Text("Gimnasio, colegio…") },
+                        colors = ChipDefaults.secondaryChipColors(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    )
+                }
                 item { ListHeader { Text("📍 Ubicación") } }
                 item { BackgroundLocationSection() }
             }
@@ -249,8 +297,41 @@ private fun RouteWarnings(catalog: Catalog, routeSettings: RouteSettings) {
     }
 }
 
+private const val DESTINATION_NAME_KEY = "destination_name"
+
+/** Pantalla del sistema para escribir o dictar el nombre de un destino. */
+private fun destinationNameIntent(): Intent {
+    val input = RemoteInput.Builder(DESTINATION_NAME_KEY)
+        .setLabel("Nombre del destino")
+        .build()
+    return RemoteInputIntentHelper.createActionRemoteInputIntent().also {
+        RemoteInputIntentHelper.putRemoteInputsExtra(it, listOf(input))
+    }
+}
+
+/** Borra un destino personalizado; pide tocar otra vez para confirmar. */
+@Composable
+private fun RemoveRouteButton(route: Route, onRemove: () -> Unit) {
+    var confirming by remember(route.id) { mutableStateOf(false) }
+    CompactChip(
+        onClick = { if (confirming) onRemove() else confirming = true },
+        label = {
+            Text(
+                if (confirming) "Toca otra vez para borrar" else "🗑 Borrar destino",
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        colors = if (confirming) ChipDefaults.primaryChipColors() else ChipDefaults.secondaryChipColors(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp, bottom = 4.dp)
+    )
+}
+
 /**
- * "Permitir siempre" para que la complicación "Bus según ubicación" cambie de ruta
+ * "Permitir siempre" para que la complicación "Bus Trabajo-Casa" cambie de ruta
  * sin abrir la app. Android no deja concederlo ni quitarlo con un diálogo: se abre
  * la página de permisos de la app.
  */
@@ -327,7 +408,7 @@ private fun BackgroundLocationSection() {
         )
         Text(
             text = if (denied && !granted) "Elige \"Permitir siempre\" en los permisos de ubicación"
-            else "Para la complicación \"Bus según ubicación\"",
+            else "Para la complicación \"Bus Trabajo-Casa\"",
             fontSize = 10.sp,
             color = if (denied && !granted) MaterialTheme.colors.error else MaterialTheme.colors.onSurfaceVariant,
             textAlign = TextAlign.Center,

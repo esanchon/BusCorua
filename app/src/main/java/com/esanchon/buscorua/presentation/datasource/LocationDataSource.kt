@@ -30,7 +30,7 @@ class LocationDataSource(context: Context) {
             PackageManager.PERMISSION_GRANTED
 
     /**
-     * "Permitir siempre": la complicación "Bus según ubicación" puede leer la posición
+     * "Permitir siempre": la complicación "Bus Trabajo-Casa" puede leer la posición
      * sin tener la app abierta. Antes de Android 10 no existe y basta el permiso normal.
      */
     fun hasBackgroundPermission(): Boolean =

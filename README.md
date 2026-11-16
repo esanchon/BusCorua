@@ -1,6 +1,6 @@
 # 🚌 BusCoruña
 
-Aplicación para relojes **Wear OS** que muestra cuánto falta para que llegue el autobús urbano de A Coruña, tanto **para ir al trabajo** como **para volver a casa**, sin sacar el móvil.
+Aplicación para relojes **Wear OS** que muestra cuánto falta para que llegue el autobús urbano de A Coruña, tanto **para ir al trabajo** como **para volver a casa** (o a los destinos que añadas), sin sacar el móvil.
 
 Los tiempos se obtienen en directo del servicio de información de iTranvías.
 
@@ -16,10 +16,11 @@ Los tiempos se obtienen en directo del servicio de información de iTranvías.
 ## Funciones
 
 - **Dos rutas: al trabajo y a casa.** Cada tarjeta muestra el próximo bus que te sirve, los minutos que faltan en grande y la parada donde cogerlo.
+- **Destinos personalizados.** Además de casa y trabajo, puedes añadir los tuyos (gimnasio, estación…), cada uno con sus paradas y líneas.
 - **Orden según dónde estás.** Cerca de casa, la primera tarjeta es "Al Trabajo"; cerca del trabajo, "A Casa".
 - **Varias paradas y líneas por ruta.** Si puedes coger el bus en más de una parada o te valen varias líneas, la app elige el que llega antes.
 - **Lista de próximos buses.** Al tocar una tarjeta se ven todos los buses que vienen para esa ruta, ordenados por minutos.
-- **Complicaciones para la esfera.** "Bus al trabajo" y "Bus a casa" muestran el tiempo restante y la línea directamente en la esfera, con una cuenta atrás que se actualiza sola. "Bus según ubicación" ocupa un solo hueco y cambia de ruta e icono según dónde estés.
+- **Complicaciones para la esfera.** "Bus al trabajo" y "Bus a casa" muestran el tiempo restante y la línea directamente en la esfera, con una cuenta atrás que se actualiza sola. "Bus Trabajo-Casa" ocupa un solo hueco y cambia de ruta e icono según dónde estés. "Bus a destino" muestra el destino que elijas al ponerla.
 - **Configuración desde el reloj.** Las paradas se eligen por línea (viendo su recorrido) o tecleando el número. Las líneas se marcan de una lista que solo incluye las que pasan por tus paradas.
 - **Nombres reales de las paradas**, obtenidos del catálogo oficial de la red.
 
@@ -27,7 +28,7 @@ Los tiempos se obtienen en directo del servicio de información de iTranvías.
 
 ### Pantalla principal
 
-Al abrir la app aparecen dos tarjetas, **🏢 Al Trabajo** y **🏠 A Casa**. Cada una muestra:
+Al abrir la app aparece una tarjeta por destino: **🏢 Al Trabajo**, **🏠 A Casa** y los que añadas (**📍 Estación tren**). Cada una muestra:
 
 - la **línea** del próximo bus que cumple tu configuración (por ejemplo, *Bus 3A*);
 - los **minutos** que faltan para que llegue;
@@ -37,7 +38,7 @@ Los tiempos se actualizan cada vez que abres la app o vuelves a ella.
 
 ### Orden según la ubicación
 
-La primera tarjeta es la de la ruta que sale de donde estás. La app compara tu distancia a la parada más cercana de cada ruta: las de "Al Trabajo" están junto a casa y las de "A Casa" junto al trabajo. No hace falta guardar ninguna dirección; se usan las coordenadas de las paradas configuradas.
+La primera tarjeta es la de la ruta que sale de donde estás. La app compara tu distancia a la parada más cercana de cada destino: las de "Al Trabajo" están junto a casa y las de "A Casa" junto al trabajo. Si dos destinos salen de las mismas paradas, va primero el que se creó antes. No hace falta guardar ninguna dirección; se usan las coordenadas de las paradas configuradas.
 
 <p align="center">
   <img src="docs/images/orden-por-ubicacion.png" width="480" alt="Cerca de casa la primera tarjeta es Al Trabajo y la complicación muestra el maletín; cerca del trabajo es A Casa y la complicación muestra la casa">
@@ -89,22 +90,34 @@ Valores por defecto:
 | 🏢 Al trabajo | 42 y 44 | 3 y 3A |
 | 🏠 A casa | 159 y 3 | 3 y 3A |
 
+**Destinos**
+
+- **+ Añadir destino**, debajo de Casa y Trabajo, pide el nombre con el teclado o el dictado del reloj.
+- El destino nuevo aparece con su sección de **Paradas** y **Líneas**. Sus paradas son donde coges el bus para ir allí. Mientras no tenga ninguna, su tarjeta muestra "Sin paradas".
+- **🗑 Borrar destino** lo elimina (pide tocar dos veces). Casa y Trabajo no se pueden borrar.
+
+<p align="center">
+  <img src="docs/images/destinos-personalizados.png" width="600" alt="Tarjeta del destino Estación tren, sus paradas en Configuración y el selector de destino de la complicación">
+</p>
+
 **Ubicación**
 
-- **Segundo plano** permite que la complicación "Bus según ubicación" consulte tu posición sin abrir la app. Al activarlo se abre la página de permisos del sistema: elige **Permitir siempre**.
+- **Segundo plano** permite que la complicación "Bus Trabajo-Casa" consulte tu posición sin abrir la app. Al activarlo se abre la página de permisos del sistema: elige **Permitir siempre**.
 - Para quitarlo, toca de nuevo el interruptor y cambia el permiso en esa misma página.
 
 ### Complicaciones en la esfera
 
 1. Mantén pulsada la esfera y entra en **Personalizar**.
 2. Ve a **Complicaciones**, toca el hueco que quieras y elige **BusCoruña**.
-3. Selecciona **Bus al trabajo**, **Bus a casa** o **Bus según ubicación**.
+3. Selecciona **Bus al trabajo**, **Bus a casa**, **Bus Trabajo-Casa** o **Bus a destino**.
 
-**Bus según ubicación** muestra el bus al trabajo con el maletín cuando estás cerca de casa y el bus a casa con la casa cuando estás cerca del trabajo. Con **Configuración → Ubicación → Segundo plano** activado cambia sola, en la siguiente actualización (como mucho cada 5 minutos). Sin ese permiso, cambia cuando abres la app en el nuevo sitio.
+**Bus Trabajo-Casa** muestra siempre el bus al trabajo o a casa: el bus al trabajo con el maletín cuando estás cerca de casa y el bus a casa con la casa cuando estás cerca del trabajo. Con **Configuración → Ubicación → Segundo plano** activado cambia sola, en la siguiente actualización (como mucho cada 5 minutos). Sin ese permiso, cambia cuando abres la app en el nuevo sitio.
+
+**Bus a destino** abre una lista para elegir qué destino muestra ese hueco, así que puedes poner una por destino. Para cambiarlo, vuelve a editar ese hueco de la esfera. Si borras el destino, la complicación muestra "Elige".
 
 | Tamaño | Qué se ve |
 |---|---|
-| Círculo pequeño | Icono de la ruta (💼 o 🏠) y el tiempo con la línea: `8m 3A` |
+| Círculo pequeño | Icono de la ruta (💼, 🏠 o 📍) y el tiempo con la línea: `8m 3A` |
 | Alargada | `Bus 3A en 8 min` y la parada |
 
 La esfera hace la cuenta atrás por sí sola. Wear OS solo deja actualizar una complicación cada 5 minutos como mínimo, así que la app vuelve a consultar con esa frecuencia y, además, cada vez que la abres. Al tocar la complicación se abre la lista de próximos buses de esa ruta.
