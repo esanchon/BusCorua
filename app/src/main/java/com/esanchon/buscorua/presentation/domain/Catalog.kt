@@ -1,6 +1,13 @@
 package com.esanchon.buscorua.presentation.domain
 
-data class StopInfo(val id: Int, val name: String, val lineIds: Set<String>)
+/** [latitude]/[longitude] son null si el catálogo no trae la posición de la parada. */
+data class StopInfo(
+    val id: Int,
+    val name: String,
+    val lineIds: Set<String>,
+    val latitude: Double? = null,
+    val longitude: Double? = null
+)
 
 /**
  * @param id código interno de la API (301).

@@ -20,6 +20,7 @@ import androidx.wear.watchface.complications.datasource.ComplicationRequest
 import androidx.wear.watchface.complications.datasource.SuspendingComplicationDataSourceService
 import com.esanchon.buscorua.R
 import com.esanchon.buscorua.presentation.domain.BusArrival
+import com.esanchon.buscorua.presentation.domain.GetFirstRouteUseCase
 import com.esanchon.buscorua.presentation.domain.Route
 import com.esanchon.buscorua.presentation.repository.BusRepository
 import com.esanchon.buscorua.presentation.ui.RouteDetailActivity
@@ -31,15 +32,16 @@ import java.util.concurrent.TimeUnit
  * Los minutos se envían como hora de llegada: la esfera hace la cuenta atrás sola,
  * así el número no se queda congelado entre actualizaciones (Wear OS permite como mínimo cada 5 min).
  */
-abstract class RouteComplicationService(
-    private val route: Route,
-    private val iconRes: Int,
-    private val routeLabel: String,
-    /** Etiqueta de la ruta en la esfera ("aT" / "aC"). El título del círculo admite unos 7 caracteres. */
-    private val shortLabel: String
-) : SuspendingComplicationDataSourceService() {
+abstract class RouteComplicationService : SuspendingComplicationDataSourceService() {
+
+    /** Ruta que muestra la complicación en esta actualización. */
+    protected abstract suspend fun route(): Route
+
+    /** Ruta de la vista previa del selector de complicaciones. */
+    protected open val previewRoute: Route = Route.WORK
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
+        val route = route()
         val repository = BusRepository.create(applicationContext)
         // Si la app acaba de consultar (p. ej. al abrirla) se reutiliza ese resultado
         val result = repository.lastRouteArrivals(route)
@@ -53,12 +55,13 @@ abstract class RouteComplicationService(
             else -> null
         }
         val arrivalAt = next?.let { Instant.ofEpochMilli(result.loadedAt + it.minutes * 60_000L) }
-        return build(request.complicationType, next, arrivalAt, status)
+        return build(request.complicationType, route, next, arrivalAt, status)
     }
 
     override fun getPreviewData(type: ComplicationType): ComplicationData? =
         build(
             type,
+            previewRoute,
             BusArrival(minutes = 4, line = "3A", stop = 42, stopName = "Emilio González López"),
             Instant.now().plusSeconds(4 * 60),
             status = null
@@ -66,6 +69,7 @@ abstract class RouteComplicationService(
 
     private fun build(
         type: ComplicationType,
+        route: Route,
         next: BusArrival?,
         arrivalAt: Instant?,
         status: String?
@@ -75,6 +79,19 @@ abstract class RouteComplicationService(
             countdown(arrivalAt, if (type == ComplicationType.LONG_TEXT) "Bus ${next.line} en ^1" else "^1 ${next.line}")
         } else {
             PlainComplicationText.Builder(status ?: "--").build()
+        }
+        val routeLabel = when (route) {
+            Route.WORK -> "al trabajo"
+            Route.HOME -> "a casa"
+        }
+        // Etiqueta en la esfera; el título del círculo admite unos 7 caracteres
+        val shortLabel = when (route) {
+            Route.WORK -> "aT"
+            Route.HOME -> "aC"
+        }
+        val iconRes = when (route) {
+            Route.WORK -> R.drawable.ic_complication_work
+            Route.HOME -> R.drawable.ic_complication_home
         }
         val description = PlainComplicationText.Builder(
             if (next != null) "Bus $routeLabel: línea ${next.line} en ${next.minutes} minutos, parada ${next.stop}"
@@ -86,7 +103,7 @@ abstract class RouteComplicationService(
             // Sin título: las esferas de Samsung, si hay título, pintan título + texto y omiten el icono
             ComplicationType.SHORT_TEXT -> ShortTextComplicationData.Builder(text, description)
                 .setMonochromaticImage(icon)
-                .setTapAction(openDetail())
+                .setTapAction(openDetail(route))
                 .build()
 
             ComplicationType.LONG_TEXT -> LongTextComplicationData.Builder(text, description)
@@ -100,7 +117,7 @@ abstract class RouteComplicationService(
                     ).build()
                 )
                 .setMonochromaticImage(icon)
-                .setTapAction(openDetail())
+                .setTapAction(openDetail(route))
                 .build()
 
             else -> NoDataComplicationData()
@@ -119,7 +136,7 @@ abstract class RouteComplicationService(
             .build()
 
     /** Tocar el círculo abre la lista de próximos buses de la ruta. */
-    private fun openDetail(): PendingIntent =
+    private fun openDetail(route: Route): PendingIntent =
         PendingIntent.getActivity(
             this,
             route.ordinal,
@@ -130,9 +147,13 @@ abstract class RouteComplicationService(
     companion object {
         private const val REUSE_MS = 60_000L
 
-        /** Pide a la esfera que vuelva a leer ambas complicaciones (tras consultar en la app). */
+        /** Pide a la esfera que vuelva a leer las complicaciones (tras consultar en la app). */
         fun requestUpdate(context: Context) {
-            listOf(WorkComplicationService::class.java, HomeComplicationService::class.java).forEach {
+            listOf(
+                WorkComplicationService::class.java,
+                HomeComplicationService::class.java,
+                NearestComplicationService::class.java
+            ).forEach {
                 ComplicationDataSourceUpdateRequester
                     .create(context, ComponentName(context, it))
                     .requestUpdateAll()
@@ -141,8 +162,20 @@ abstract class RouteComplicationService(
     }
 }
 
-class WorkComplicationService :
-    RouteComplicationService(Route.WORK, R.drawable.ic_complication_work, "al trabajo", "aT")
+class WorkComplicationService : RouteComplicationService() {
+    override suspend fun route() = Route.WORK
+}
 
-class HomeComplicationService :
-    RouteComplicationService(Route.HOME, R.drawable.ic_complication_home, "a casa", "aC")
+class HomeComplicationService : RouteComplicationService() {
+    override suspend fun route() = Route.HOME
+    override val previewRoute = Route.HOME
+}
+
+/**
+ * "Bus según ubicación": cerca de casa muestra el bus al trabajo (con el maletín)
+ * y cerca del trabajo el bus a casa (con la casa). Mismo criterio que el orden de
+ * las tarjetas de la app; sin ubicación se usa la última ruta decidida.
+ */
+class NearestComplicationService : RouteComplicationService() {
+    override suspend fun route() = GetFirstRouteUseCase.create(applicationContext).execute()
+}

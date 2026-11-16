@@ -56,6 +56,11 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.3.1'
     implementation "com.squareup.okhttp3:okhttp:4.9.0"
 
+    // Ubicación para ordenar las tarjetas (usa el GPS del reloj o la del móvil, la que haya)
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
+    // play-services trae un Fragment antiguo que no admite el diálogo de permisos moderno
+    implementation 'androidx.fragment:fragment-ktx:1.3.6'
+
     // Instala los Baseline Profiles (los de Compose y el de src/main/baseline-prof.txt)
     // para que el código se precompile y arranque más rápido.
     implementation 'androidx.profileinstaller:profileinstaller:1.3.1'

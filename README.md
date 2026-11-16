@@ -16,9 +16,10 @@ Los tiempos se obtienen en directo del servicio de información de iTranvías.
 ## Funciones
 
 - **Dos rutas: al trabajo y a casa.** Cada tarjeta muestra el próximo bus que te sirve, los minutos que faltan en grande y la parada donde cogerlo.
+- **Orden según dónde estás.** Cerca de casa, la primera tarjeta es "Al Trabajo"; cerca del trabajo, "A Casa".
 - **Varias paradas y líneas por ruta.** Si puedes coger el bus en más de una parada o te valen varias líneas, la app elige el que llega antes.
 - **Lista de próximos buses.** Al tocar una tarjeta se ven todos los buses que vienen para esa ruta, ordenados por minutos.
-- **Complicaciones para la esfera.** "Bus al trabajo" y "Bus a casa" muestran el tiempo restante y la línea directamente en la esfera, con una cuenta atrás que se actualiza sola.
+- **Complicaciones para la esfera.** "Bus al trabajo" y "Bus a casa" muestran el tiempo restante y la línea directamente en la esfera, con una cuenta atrás que se actualiza sola. "Bus según ubicación" ocupa un solo hueco y cambia de ruta e icono según dónde estés.
 - **Configuración desde el reloj.** Las paradas se eligen por línea (viendo su recorrido) o tecleando el número. Las líneas se marcan de una lista que solo incluye las que pasan por tus paradas.
 - **Nombres reales de las paradas**, obtenidos del catálogo oficial de la red.
 
@@ -33,6 +34,18 @@ Al abrir la app aparecen dos tarjetas, **🏢 Al Trabajo** y **🏠 A Casa**. Ca
 - la **parada** donde pasa: `42 - Emilio González López, Manuel Azaña`.
 
 Los tiempos se actualizan cada vez que abres la app o vuelves a ella.
+
+### Orden según la ubicación
+
+La primera tarjeta es la de la ruta que sale de donde estás. La app compara tu distancia a la parada más cercana de cada ruta: las de "Al Trabajo" están junto a casa y las de "A Casa" junto al trabajo. No hace falta guardar ninguna dirección; se usan las coordenadas de las paradas configuradas.
+
+<p align="center">
+  <img src="docs/images/orden-por-ubicacion.png" width="480" alt="Cerca de casa la primera tarjeta es Al Trabajo y la complicación muestra el maletín; cerca del trabajo es A Casa y la complicación muestra la casa">
+</p>
+
+- La primera vez la app pide permiso de **ubicación aproximada**, suficiente para distinguir casa de trabajo.
+- Los tiempos se cargan sin esperar a la ubicación; las tarjetas se recolocan en cuanto llega.
+- Sin permiso o sin ubicación, se mantiene el último orden.
 
 ### Próximos buses
 
@@ -80,7 +93,9 @@ Valores por defecto:
 
 1. Mantén pulsada la esfera y entra en **Personalizar**.
 2. Ve a **Complicaciones**, toca el hueco que quieras y elige **BusCoruña**.
-3. Selecciona **Bus al trabajo** o **Bus a casa**.
+3. Selecciona **Bus al trabajo**, **Bus a casa** o **Bus según ubicación**.
+
+**Bus según ubicación** muestra el bus al trabajo con el maletín cuando estás cerca de casa y el bus a casa con la casa cuando estás cerca del trabajo. Sin permiso de ubicación en segundo plano, cambia de ruta cuando abres la app en el nuevo sitio.
 
 | Tamaño | Qué se ve |
 |---|---|
@@ -121,7 +136,8 @@ La build release se firma con la clave de depuración para poder instalarla dire
 
 - **Datos:** consulta directamente la web de iTranvías (`itranvias.com/queryitr_v3.php`):
   - `func=0`: próximos buses de una parada;
-  - `func=7`: catálogo de líneas y paradas con sus recorridos. Se guarda en el reloj y se renueva cada 7 días.
+  - `func=7`: catálogo de líneas y paradas con sus recorridos y coordenadas. Se guarda en el reloj y se renueva cada 7 días.
+- **Ubicación:** Fused Location de Google Play Services, con precisión aproximada. Usa el GPS del reloj o la ubicación del móvil, la que esté disponible.
 - **Arquitectura:** capas `datasource` → `repository` → `presentation`/`ui`, con Jetpack Compose for Wear OS para la interfaz y una `SuspendingComplicationDataSourceService` para las complicaciones.
 - **Rendimiento:**
   - las paradas de las dos rutas se consultan en paralelo con un único cliente HTTP compartido;

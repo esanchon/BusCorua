@@ -1,10 +1,12 @@
 package com.esanchon.buscorua.presentation.ui
 
+import android.Manifest
 import android.content.Intent
 import android.location.Location
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.TimeTextDefaults.timeFormat
+import com.esanchon.buscorua.presentation.datasource.LocationDataSource
 import com.esanchon.buscorua.presentation.domain.BusTime
 import com.esanchon.buscorua.presentation.domain.Route
 import com.esanchon.buscorua.presentation.presentation.MainPresenter
@@ -35,13 +38,28 @@ class MainActivity : ComponentActivity(), ViewTranslator {
     // Estado observado por Compose: al cambiarlo solo se recompone lo necesario,
     // sin reconstruir toda la pantalla con setContent.
     private var busTimeState by mutableStateOf(loadingBusTime())
+    private var firstRouteState by mutableStateOf(Route.WORK)
+
+    private val locationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) presenter?.loadFirstRoute()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         presenter = MainPresenter(viewTranslator = this, context = applicationContext)
+        firstRouteState = presenter!!.initialFirstRoute()
+
+        // Se pide al crear la pantalla y no en onResume: el diálogo vuelve a
+        // llamar a onResume y, si se deniega, se pediría en bucle
+        if (savedInstanceState == null && !LocationDataSource(this).hasPermission()) {
+            locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+
         setContent {
             WearApp(
                 busTimeState,
+                firstRoute = firstRouteState,
                 onOpenRoute = { route -> startActivity(RouteDetailActivity.intent(this, route)) },
                 onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) }
             )
@@ -62,8 +80,10 @@ class MainActivity : ComponentActivity(), ViewTranslator {
     fun loadBusTimes() {
         busTimeState = loadingBusTime()
 
-        // GPS Disabled: Loads directly with default location without requesting GPS or permissions.
+        // Los tiempos no dependen de la ubicación: se cargan sin esperar al GPS
         loadWithDefaultLocation()
+        // Sin permiso no hace nada y se queda el último orden
+        presenter?.loadFirstRoute()
     }
 
     private fun loadWithDefaultLocation() {
@@ -76,6 +96,10 @@ class MainActivity : ComponentActivity(), ViewTranslator {
 
     override fun showTime(busTime: BusTime) {
         busTimeState = busTime
+    }
+
+    override fun showFirstRoute(route: Route) {
+        firstRouteState = route
     }
 
     override fun showError() {
@@ -94,7 +118,12 @@ class MainActivity : ComponentActivity(), ViewTranslator {
 }
 
 @Composable
-fun WearApp(busTime: BusTime, onOpenRoute: (Route) -> Unit = {}, onOpenSettings: () -> Unit = {}) {
+fun WearApp(
+    busTime: BusTime,
+    firstRoute: Route = Route.WORK,
+    onOpenRoute: (Route) -> Unit = {},
+    onOpenSettings: () -> Unit = {}
+) {
     BusCoruñaTheme {
         val listState = rememberScalingLazyListState()
         Scaffold(
@@ -134,30 +163,14 @@ fun WearApp(busTime: BusTime, onOpenRoute: (Route) -> Unit = {}, onOpenSettings:
                     )
                 }
 
-                // Card: Al Trabajo
-                item {
-                    RouteCard(
-                        title = "🏢 Al Trabajo",
-                        stopNumber = busTime.stopWork,
-                        stopName = busTime.stopWorkName,
-                        lineNum = busTime.line ?: "-",
-                        timeText = busTime.time ?: "N/A",
-                        onClick = { onOpenRoute(Route.WORK) }
-                    )
-                }
+                // Primero la ruta que sale de donde estás: cerca de casa, "Al Trabajo"
+                val routes = if (firstRoute == Route.HOME) listOf(Route.HOME, Route.WORK)
+                else listOf(Route.WORK, Route.HOME)
 
-                item { Spacer(modifier = Modifier.height(4.dp)) }
-
-                // Card: A Casa
-                item {
-                    RouteCard(
-                        title = "🏠 A Casa",
-                        stopNumber = busTime.stopHome,
-                        stopName = busTime.stopHomeName,
-                        lineNum = busTime.lineToHome ?: "-",
-                        timeText = busTime.timeToHome ?: "N/A",
-                        onClick = { onOpenRoute(Route.HOME) }
-                    )
+                routes.forEachIndexed { index, route ->
+                    if (index > 0) item { Spacer(modifier = Modifier.height(4.dp)) }
+                    // Con clave, Compose mueve la tarjeta en vez de rehacerla
+                    item(key = route) { RouteCardFor(route, busTime, onOpenRoute) }
                 }
 
                 item {
@@ -171,6 +184,26 @@ fun WearApp(busTime: BusTime, onOpenRoute: (Route) -> Unit = {}, onOpenSettings:
             }
         }
     }
+}
+
+@Composable
+private fun RouteCardFor(route: Route, busTime: BusTime, onOpenRoute: (Route) -> Unit) = when (route) {
+    Route.WORK -> RouteCard(
+        title = "🏢 Al Trabajo",
+        stopNumber = busTime.stopWork,
+        stopName = busTime.stopWorkName,
+        lineNum = busTime.line ?: "-",
+        timeText = busTime.time ?: "N/A",
+        onClick = { onOpenRoute(Route.WORK) }
+    )
+    Route.HOME -> RouteCard(
+        title = "🏠 A Casa",
+        stopNumber = busTime.stopHome,
+        stopName = busTime.stopHomeName,
+        lineNum = busTime.lineToHome ?: "-",
+        timeText = busTime.timeToHome ?: "N/A",
+        onClick = { onOpenRoute(Route.HOME) }
+    )
 }
 
 @Composable

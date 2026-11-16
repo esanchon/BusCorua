@@ -32,6 +32,15 @@ class SettingsLocalDataSource(context: Context) {
         prefs.edit().putString(linesKey(route), lines.joinToString(",")).apply()
     }
 
+    /** Ruta que se mostró primero la última vez, para abrir la app en el mismo orden. */
+    fun getFirstRoute(): Route =
+        prefs.getString(FIRST_ROUTE_KEY, null)?.let { name -> Route.values().firstOrNull { it.name == name } }
+            ?: Route.WORK
+
+    fun setFirstRoute(route: Route) {
+        prefs.edit().putString(FIRST_ROUTE_KEY, route.name).apply()
+    }
+
     private fun stopsKey(route: Route) = "stops_${route.name.lowercase()}"
     private fun linesKey(route: Route) = "lines_${route.name.lowercase()}"
 
@@ -42,5 +51,6 @@ class SettingsLocalDataSource(context: Context) {
 
     companion object {
         private val DEFAULT_LINES = listOf("3", "3A")
+        private const val FIRST_ROUTE_KEY = "first_route"
     }
 }

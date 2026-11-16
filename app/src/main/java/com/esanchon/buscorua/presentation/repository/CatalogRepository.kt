@@ -76,7 +76,10 @@ class CatalogRepository(
             val id = stop.optInt("id", -1).takeIf { it > 0 } ?: continue
             val links = stop.optJSONArray("enlaces")
             val lineIds = (0 until (links?.length() ?: 0)).map { links!!.get(it).toString() }.toSet()
-            stops[id] = StopInfo(id, stop.optString("nombre"), lineIds)
+            // posx = longitud, posy = latitud
+            val longitude = stop.optDouble("posx").takeUnless { it.isNaN() }
+            val latitude = stop.optDouble("posy").takeUnless { it.isNaN() }
+            stops[id] = StopInfo(id, stop.optString("nombre"), lineIds, latitude, longitude)
         }
 
         if (lines.isEmpty() || stops.isEmpty()) null else Catalog(lines, stops)
