@@ -1,6 +1,11 @@
 package com.esanchon.buscorua.presentation.ui
 
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -11,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,13 +25,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.TimeTextDefaults.timeFormat
+import com.esanchon.buscorua.presentation.complication.RouteComplicationService
 import com.esanchon.buscorua.presentation.datasource.BusRemoteDataSource
+import com.esanchon.buscorua.presentation.datasource.LocationDataSource
 import com.esanchon.buscorua.presentation.datasource.CatalogLocalDataSource
 import com.esanchon.buscorua.presentation.datasource.SettingsLocalDataSource
 import com.esanchon.buscorua.presentation.domain.Catalog
@@ -79,6 +90,8 @@ fun SettingsScreen(settings: SettingsLocalDataSource, catalogRepository: Catalog
                 item { RouteSettingsSection(settings, catalog, Route.WORK) }
                 item { ListHeader { Text("🏠 A Casa") } }
                 item { RouteSettingsSection(settings, catalog, Route.HOME) }
+                item { ListHeader { Text("📍 Ubicación") } }
+                item { BackgroundLocationSection() }
             }
         }
     }
@@ -233,6 +246,105 @@ private fun RouteWarnings(catalog: Catalog, routeSettings: RouteSettings) {
                 .fillMaxWidth()
                 .padding(top = 4.dp)
         )
+    }
+}
+
+/**
+ * "Permitir siempre" para que la complicación "Bus según ubicación" cambie de ruta
+ * sin abrir la app. Android no deja concederlo ni quitarlo con un diálogo: se abre
+ * la página de permisos de la app.
+ */
+@Composable
+private fun BackgroundLocationSection() {
+    val context = LocalContext.current
+    val location = remember { LocationDataSource(context) }
+    var granted by remember { mutableStateOf(location.hasBackgroundPermission()) }
+    var denied by remember { mutableStateOf(false) }
+
+    // Al volver de los ajustes del sistema se refleja lo que se haya cambiado allí
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) granted = location.hasBackgroundPermission()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    fun onResult(isGranted: Boolean) {
+        granted = location.hasBackgroundPermission()
+        denied = !isGranted
+        // La complicación vuelve a mirar la ubicación con el permiso nuevo
+        if (granted) RouteComplicationService.requestUpdate(context)
+    }
+
+    val backgroundRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), ::onResult)
+    // El permiso en segundo plano solo se puede pedir con el normal ya concedido
+    val foregroundRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            backgroundRequest.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        } else {
+            onResult(ok)
+        }
+    }
+
+    fun openAppSettings() {
+        context.startActivity(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+        )
+    }
+
+    Column {
+        ToggleChip(
+            checked = granted,
+            onCheckedChange = {
+                when {
+                    // Quitarlo solo se puede desde los ajustes del sistema
+                    granted -> openAppSettings()
+                    !location.hasPermission() -> foregroundRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
+                        backgroundRequest.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    else -> onResult(true)
+                }
+            },
+            label = { Text("Segundo plano", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            secondaryLabel = {
+                Text(
+                    if (granted) "Siempre" else "Solo al abrir la app",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            toggleControl = {
+                Icon(
+                    imageVector = ToggleChipDefaults.switchIcon(granted),
+                    contentDescription = if (granted) "Activada" else "Desactivada"
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp)
+        )
+        Text(
+            text = if (denied && !granted) "Elige \"Permitir siempre\" en los permisos de ubicación"
+            else "Para la complicación \"Bus según ubicación\"",
+            fontSize = 10.sp,
+            color = if (denied && !granted) MaterialTheme.colors.error else MaterialTheme.colors.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp)
+        )
+        if (denied && !granted) {
+            CompactChip(
+                onClick = ::openAppSettings,
+                label = { Text("Abrir permisos", fontSize = 12.sp) },
+                colors = ChipDefaults.secondaryChipColors(),
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 4.dp)
+            )
+        }
     }
 }
 

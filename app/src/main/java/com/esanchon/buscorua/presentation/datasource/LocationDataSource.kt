@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
@@ -27,6 +28,16 @@ class LocationDataSource(context: Context) {
     fun hasPermission(): Boolean =
         ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
+
+    /**
+     * "Permitir siempre": la complicación "Bus según ubicación" puede leer la posición
+     * sin tener la app abierta. Antes de Android 10 no existe y basta el permiso normal.
+     */
+    fun hasBackgroundPermission(): Boolean =
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) hasPermission()
+        else hasPermission() && ContextCompat.checkSelfPermission(
+            appContext, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
 
     /** null sin permiso, con la ubicación desactivada o si no se consigue a tiempo. */
     @SuppressLint("MissingPermission") // comprobado en hasPermission()

@@ -89,13 +89,18 @@ Valores por defecto:
 | 🏢 Al trabajo | 42 y 44 | 3 y 3A |
 | 🏠 A casa | 159 y 3 | 3 y 3A |
 
+**Ubicación**
+
+- **Segundo plano** permite que la complicación "Bus según ubicación" consulte tu posición sin abrir la app. Al activarlo se abre la página de permisos del sistema: elige **Permitir siempre**.
+- Para quitarlo, toca de nuevo el interruptor y cambia el permiso en esa misma página.
+
 ### Complicaciones en la esfera
 
 1. Mantén pulsada la esfera y entra en **Personalizar**.
 2. Ve a **Complicaciones**, toca el hueco que quieras y elige **BusCoruña**.
 3. Selecciona **Bus al trabajo**, **Bus a casa** o **Bus según ubicación**.
 
-**Bus según ubicación** muestra el bus al trabajo con el maletín cuando estás cerca de casa y el bus a casa con la casa cuando estás cerca del trabajo. Sin permiso de ubicación en segundo plano, cambia de ruta cuando abres la app en el nuevo sitio.
+**Bus según ubicación** muestra el bus al trabajo con el maletín cuando estás cerca de casa y el bus a casa con la casa cuando estás cerca del trabajo. Con **Configuración → Ubicación → Segundo plano** activado cambia sola, en la siguiente actualización (como mucho cada 5 minutos). Sin ese permiso, cambia cuando abres la app en el nuevo sitio.
 
 | Tamaño | Qué se ve |
 |---|---|

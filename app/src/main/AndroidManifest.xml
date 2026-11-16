@@ -3,6 +3,8 @@
 
     <!-- Ubicación aproximada: solo para poner arriba la tarjeta de la ruta que sale de donde estás -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Opcional, desde Configuración: la complicación "Bus según ubicación" cambia sola de ruta -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <uses-feature android:name="android.hardware.type.watch" />
