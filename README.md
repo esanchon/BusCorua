@@ -15,11 +15,10 @@ Los tiempos se obtienen en directo del servicio de información de iTranvías.
 
 ## Funciones
 
-- **Dos rutas: al trabajo y a casa.** Cada tarjeta muestra el próximo bus que te sirve, los minutos que faltan en grande y la parada donde cogerlo.
-- **Destinos personalizados.** Además de casa y trabajo, puedes añadir los tuyos (gimnasio, estación…), cada uno con sus paradas y líneas.
-- **Orden según dónde estás.** Cerca de casa, la primera tarjeta es "Al Trabajo"; cerca del trabajo, "A Casa".
-- **Varias paradas y líneas por ruta.** Si puedes coger el bus en más de una parada o te valen varias líneas, la app elige el que llega antes.
-- **Lista de próximos buses.** Al tocar una tarjeta se ven todos los buses que vienen para esa ruta, ordenados por minutos.
+- **Al trabajo, a casa y tus propios destinos.** Una tarjeta por destino con el próximo bus que te sirve, los minutos que faltan en grande y la parada donde cogerlo. Puedes añadir los destinos que quieras (gimnasio, estación…), cada uno con sus paradas y líneas.
+- **Orden según dónde estás.** Primero va el destino que sale de donde estás: cerca de casa, "Al Trabajo"; cerca del trabajo, "A Casa".
+- **Varias paradas y líneas por destino.** Si puedes coger el bus en más de una parada o te valen varias líneas, la app elige el que llega antes.
+- **Lista de próximos buses.** Al tocar una tarjeta se ven todos los buses que vienen para ese destino, ordenados por minutos.
 - **Complicaciones para la esfera.** "Bus al trabajo" y "Bus a casa" muestran el tiempo restante y la línea directamente en la esfera, con una cuenta atrás que se actualiza sola. "Bus Trabajo-Casa" ocupa un solo hueco y cambia de ruta e icono según dónde estés. "Bus a destino" muestra el destino que elijas al ponerla.
 - **Configuración desde el reloj.** Las paradas se eligen por línea (viendo su recorrido) o tecleando el número. Las líneas se marcan de una lista que solo incluye las que pasan por tus paradas.
 - **Nombres reales de las paradas**, obtenidos del catálogo oficial de la red.
@@ -56,7 +55,7 @@ Toca cualquier bus de la lista para actualizarla.
 
 ### Configuración
 
-Desde **⚙️ Configuración**, al final de la pantalla principal, se ajusta cada ruta por separado.
+Desde **⚙️ Configuración**, al final de la pantalla principal, se ajusta cada destino por separado y se añaden o borran destinos.
 
 <p align="center">
   <img src="docs/images/config-paradas.png" width="200" alt="Paradas configuradas para ir al trabajo">
@@ -155,17 +154,17 @@ La build release se firma con la clave de depuración para poder instalarla dire
 - **Datos:** consulta directamente la web de iTranvías (`itranvias.com/queryitr_v3.php`):
   - `func=0`: próximos buses de una parada;
   - `func=7`: catálogo de líneas y paradas con sus recorridos y coordenadas. Se guarda en el reloj y se renueva cada 7 días.
-- **Ubicación:** Fused Location de Google Play Services, con precisión aproximada. Usa el GPS del reloj o la ubicación del móvil, la que esté disponible.
-- **Arquitectura:** capas `datasource` → `repository` → `presentation`/`ui`, con Jetpack Compose for Wear OS para la interfaz y una `SuspendingComplicationDataSourceService` para las complicaciones.
+- **Ubicación:** Fused Location de Google Play Services, con precisión aproximada. Usa el GPS del reloj o la ubicación del móvil, la que esté disponible. Los destinos se ordenan por la distancia a su parada más cercana, con las coordenadas del catálogo.
+- **Arquitectura:** capas `datasource` → `repository` → `presentation`/`ui`, con Jetpack Compose for Wear OS para la interfaz y una `SuspendingComplicationDataSourceService` para las complicaciones. "Bus a destino" usa la pantalla de configuración de complicaciones de Wear OS para elegir el destino de cada hueco.
 - **Rendimiento:**
-  - las paradas de las dos rutas se consultan en paralelo con un único cliente HTTP compartido;
+  - todos los destinos y sus paradas se consultan en paralelo con un único cliente HTTP compartido;
   - la build release usa R8 e incluye un Baseline Profile para arrancar más rápido.
 
 ```
 app/src/main/java/com/esanchon/buscorua/presentation/
 ├── complication/   Complicaciones de la esfera
 ├── datasource/     API de iTranvías, catálogo y configuración guardada
-├── domain/         Modelos (rutas, paradas, líneas, llegadas)
+├── domain/         Modelos (destinos, paradas, líneas, llegadas) y orden por ubicación
 ├── presentation/   Presenter de la pantalla principal
 ├── repository/     Combina datos y aplica los filtros de cada ruta
 ├── theme/          Colores y tipografía
