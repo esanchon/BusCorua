@@ -1,8 +1,10 @@
 package com.esanchon.buscorua.presentation.complication
 
 import android.app.PendingIntent
+import android.app.TaskStackBuilder
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.Icon
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationText
@@ -24,6 +26,7 @@ import com.esanchon.buscorua.presentation.domain.BusArrival
 import com.esanchon.buscorua.presentation.domain.GetRouteOrderUseCase
 import com.esanchon.buscorua.presentation.domain.Route
 import com.esanchon.buscorua.presentation.repository.BusRepository
+import com.esanchon.buscorua.presentation.ui.MainActivity
 import com.esanchon.buscorua.presentation.ui.RouteDetailActivity
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -141,14 +144,19 @@ abstract class RouteComplicationService : SuspendingComplicationDataSourceServic
             .apply { if (template != null) setText(template) }
             .build()
 
-    /** Tocar el círculo abre la lista de próximos buses de la ruta. */
+    /**
+     * Tocar el círculo abre la lista de próximos buses de la ruta, con la pantalla de inicio debajo.
+     * TaskStackBuilder reinicia la tarea (NEW_TASK | CLEAR_TASK): tocar varias veces la esfera no
+     * apila detalles, y atrás siempre lleva al inicio y luego sale.
+     */
     private fun openDetail(route: Route): PendingIntent =
-        PendingIntent.getActivity(
-            this,
-            route.id.hashCode(),
-            RouteDetailActivity.intent(this, route),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        TaskStackBuilder.create(this)
+            .addNextIntent(Intent(this, MainActivity::class.java))
+            .addNextIntent(RouteDetailActivity.intent(this, route))
+            .getPendingIntent(
+                route.id.hashCode(),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
 
     companion object {
         private const val REUSE_MS = 60_000L
